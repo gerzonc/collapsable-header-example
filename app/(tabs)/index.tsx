@@ -1,9 +1,7 @@
 import mockData from "@/sample/mockData";
-import { useRef } from "react";
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
   type ListRenderItem,
   useWindowDimensions
@@ -15,19 +13,19 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const EXPANDED_HEIGHT = 220;
-const COLLAPSED_HEIGHT = 110;
+const COLLAPSED_HEIGHT = 144;
 
 export default function HomeScreen() {
   const translateY = useSharedValue(0);
-  const headerHeight = useSharedValue(EXPANDED_HEIGHT);
+  const { top } = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const textWidth = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       "worklet";
-      console.log(event.contentOffset.y);
       translateY.value = event.contentOffset.y;
     }
   });
@@ -45,26 +43,44 @@ export default function HomeScreen() {
   const animatedTextStyleOne = useAnimatedStyle(() => {
     const translation = interpolate(
       translateY.value,
+      [0, 45],
+      [0, -100],
+      Extrapolation.CLAMP
+    );
+    const translateX = interpolate(
+      translateY.value,
       [0, 30],
       [0, -100],
       Extrapolation.CLAMP
     );
+    const scale = interpolate(
+      translateY.value,
+      [0, 45],
+      [1, 0],
+      Extrapolation.CLAMP
+    );
     return {
-      opacity: interpolate(translateY.value, [0, 15], [1, 0]),
-      transform: [{ translateY: translation }]
+      opacity: interpolate(translateY.value, [0, 30], [1, 0]),
+      transform: [{ translateY: translation }, { translateX }, { scale }]
     };
   });
 
   const animatedTextStyleTwo = useAnimatedStyle(() => {
     const translation = interpolate(
       translateY.value,
-      [0, 30],
-      [-100, 0],
+      [0, 120],
+      [15, 0],
+      Extrapolation.CLAMP
+    );
+    const scale = interpolate(
+      translateY.value,
+      [0, 120],
+      [2, 1],
       Extrapolation.CLAMP
     );
     return {
-      opacity: interpolate(translateY.value, [0, 15], [0, 1]),
-      transform: [{ translateY: translation }]
+      transform: [{ translateY: translation }, { scale }],
+      opacity: interpolate(translateY.value, [0, 45], [0, 1])
     };
   });
 
@@ -86,25 +102,34 @@ export default function HomeScreen() {
       <Animated.View
         style={[
           {
+            paddingTop: top,
             backgroundColor: "red",
-            alignItems: "flex-end",
-            padding: 16,
-            flexDirection: "row",
-            justifyContent: "space-between"
+            justifyContent: "flex-end",
+            padding: 16
           },
           animatedHeaderStyle
         ]}
       >
         <Animated.Text
-          style={animatedTextStyleOne}
+          style={[
+            {
+              fontSize: 25,
+              alignSelf: "center"
+            },
+            animatedTextStyleTwo
+          ]}
+        >
+          Hello World
+        </Animated.Text>
+        <Animated.Text
+          adjustsFontSizeToFit
+          style={[{ fontSize: 32 }, animatedTextStyleOne]}
           onLayout={({ nativeEvent }) => {
             textWidth.value = nativeEvent.layout.width;
           }}
         >
           Hello World
         </Animated.Text>
-        <Animated.Text style={animatedTextStyleTwo}>Hello World</Animated.Text>
-        <Animated.View style={{ width: 100 }} />
       </Animated.View>
       <Animated.FlatList
         data={mockData}
@@ -112,12 +137,11 @@ export default function HomeScreen() {
         renderItem={renderItem}
         snapToAlignment="start"
         snapToInterval={height / 5}
-        decelerationRate="fast"
         scrollEventThrottle={16}
         automaticallyAdjustsScrollIndicatorInsets
         automaticallyAdjustContentInsets
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.list]}
+        contentContainerStyle={styles.list}
       />
     </View>
   );
@@ -126,7 +150,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   list: {
     padding: 16,
-    paddingBottom: EXPANDED_HEIGHT / 2
+    paddingBottom: EXPANDED_HEIGHT
   },
   itemContainer: {
     backgroundColor: "#f9f9f9",
