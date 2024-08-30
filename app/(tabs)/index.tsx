@@ -1,70 +1,155 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import mockData from "@/sample/mockData";
+import { useRef } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  type ListRenderItem,
+  useWindowDimensions
+} from "react-native";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue
+} from "react-native-reanimated";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const EXPANDED_HEIGHT = 220;
+const COLLAPSED_HEIGHT = 110;
 
 export default function HomeScreen() {
+  const translateY = useSharedValue(0);
+  const headerHeight = useSharedValue(EXPANDED_HEIGHT);
+  const { height } = useWindowDimensions();
+  const textWidth = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      "worklet";
+      console.log(event.contentOffset.y);
+      translateY.value = event.contentOffset.y;
+    }
+  });
+  const animatedHeaderStyle = useAnimatedStyle(() => {
+    return {
+      height: interpolate(
+        translateY.value,
+        [0, COLLAPSED_HEIGHT],
+        [EXPANDED_HEIGHT, COLLAPSED_HEIGHT],
+        Extrapolation.CLAMP
+      )
+    };
+  });
+
+  const animatedTextStyleOne = useAnimatedStyle(() => {
+    const translation = interpolate(
+      translateY.value,
+      [0, 30],
+      [0, -100],
+      Extrapolation.CLAMP
+    );
+    return {
+      opacity: interpolate(translateY.value, [0, 15], [1, 0]),
+      transform: [{ translateY: translation }]
+    };
+  });
+
+  const animatedTextStyleTwo = useAnimatedStyle(() => {
+    const translation = interpolate(
+      translateY.value,
+      [0, 30],
+      [-100, 0],
+      Extrapolation.CLAMP
+    );
+    return {
+      opacity: interpolate(translateY.value, [0, 15], [0, 1]),
+      transform: [{ translateY: translation }]
+    };
+  });
+
+  const renderItem: ListRenderItem<{
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+  }> = ({ item }) => (
+    <View style={styles.itemContainer}>
+      <Text style={styles.title}>{item.title}</Text>
+      <Text style={styles.description}>{item.description}</Text>
+      <Text style={styles.date}>{item.date}</Text>
+    </View>
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View>
+      <Animated.View
+        style={[
+          {
+            backgroundColor: "red",
+            alignItems: "flex-end",
+            padding: 16,
+            flexDirection: "row",
+            justifyContent: "space-between"
+          },
+          animatedHeaderStyle
+        ]}
+      >
+        <Animated.Text
+          style={animatedTextStyleOne}
+          onLayout={({ nativeEvent }) => {
+            textWidth.value = nativeEvent.layout.width;
+          }}
+        >
+          Hello World
+        </Animated.Text>
+        <Animated.Text style={animatedTextStyleTwo}>Hello World</Animated.Text>
+        <Animated.View style={{ width: 100 }} />
+      </Animated.View>
+      <Animated.FlatList
+        data={mockData}
+        onScroll={scrollHandler}
+        renderItem={renderItem}
+        snapToAlignment="start"
+        snapToInterval={height / 5}
+        decelerationRate="fast"
+        scrollEventThrottle={16}
+        automaticallyAdjustsScrollIndicatorInsets
+        automaticallyAdjustContentInsets
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={[styles.list]}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  list: {
+    padding: 16,
+    paddingBottom: EXPANDED_HEIGHT / 2
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  itemContainer: {
+    backgroundColor: "#f9f9f9",
+    padding: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8
   },
+  description: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 8
+  },
+  date: {
+    fontSize: 12,
+    color: "#aaa"
+  }
 });
